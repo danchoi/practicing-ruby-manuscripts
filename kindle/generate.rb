@@ -1,5 +1,6 @@
 require 'yaml'
 require 'pathname'
+require 'nokogiri'
 require 'github/markdown' # gem install github-markdown
 if `which kindlerb` == ''
   abort "Please run `gem install kindlerb`"
@@ -70,7 +71,11 @@ sections.each_with_index {|vol, i|
     raise "No title found for #{title_key}" unless title
     puts title
     html = wrap_html(title, "<h1>#{title}</h1>" + html_content)
-    File.write(apath, html)
+
+    # fix lists
+    d = Nokogiri::HTML(html)
+    d.xpath("//li/p").each {|p| p.swap p.children}
+    File.write(apath, d.serialize)
   }
 }
 

@@ -60,7 +60,10 @@ sections.each_with_index {|vol, i|
     puts article.to_s
     apath = "sections/%.3d/%.3d.html" % [i, j]
     md_content = File.read article    
-    html_content = GitHub::Markdown.render_gfm(md_content)
+    # this is a hack because some of the text includes a string like 'Issue #21' where #21 
+    # would otherwise be incorrectly turned into a h1 header by Markdown.
+    md_content.gsub!(/^#[^#]/, '&nbsp;\&')
+
     html_content = GitHub::Markdown.render(md_content)
     title_key = article.to_s[/\/(\d{3}\w?)/, 1].sub(/0+/, '') # strip leading 0s
     title = vol_toc[title_key]

@@ -63,7 +63,7 @@ sections.each_with_index {|vol, i|
     md_content = File.read article    
     # this is a hack because some of the text includes a string like 'Issue #21' where #21 
     # would otherwise be incorrectly turned into a h1 header by Markdown.
-    md_content.gsub!(/^#[^#]/, '&nbsp;\&')
+    md_content.gsub!(/^#[^# ]/, '&nbsp;\&')
 
     html_content = GitHub::Markdown.render(md_content)
     title_key = article.to_s[/\/(\d{3}\w?)/, 1].sub(/0+/, '') # strip leading 0s

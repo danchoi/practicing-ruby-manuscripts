@@ -2,6 +2,8 @@ require 'yaml'
 require 'pathname'
 require 'nokogiri'
 require 'github/markdown' # gem install github-markdown
+require 'fileutils'
+
 if `which kindlerb` == ''
   abort "Please run `gem install kindlerb`"
 end
@@ -13,6 +15,34 @@ def wrap_html(title, body)
   "<html><head><title>#{title}</title></head><body>#{body}</body></html>"
 end
 
+def run_shell_command cmd
+  puts "  #{cmd}"
+  `#{cmd}`
+end
+
+def download_images! doc
+  doc.search('img').each {|img|
+    src = img[:src] 
+    /(?<img_file>[^\/]+)$/ =~ src
+
+    FileUtils::mkdir_p 'images'
+    FileUtils::mkdir_p 'processed_images'
+    unless File.size?("images/#{img_file}")
+      run_shell_command "curl -Ls '#{src}' > images/#{img_file}"
+      if img_file !~ /(png|jpeg|jpg|gif)$/i
+        filetype = `identify images/#{img_file} | awk '{print $2}'`.chomp.downcase
+        run_shell_command "cp images/#{img_file} images/#{img_file}.#{filetype}"
+        img_file = "#{img_file}.#{filetype}"
+      end
+    end
+    processed_image_path = "processed_images/#{img_file.gsub('%20', '_').sub(/(\.\w+)$/, "-grayscale.gif")}"
+    sleep 0.1
+    unless File.size?(processed_image_path)
+      run_shell_command "convert images/#{img_file} -compose over -background white -flatten -resize '300x200>' -alpha off #{processed_image_path}"
+    end
+    img['src'] = [Dir.pwd, processed_image_path].join("/")
+  }
+end
 
 cover_path = nil
 date = Time.now.strftime('%F')
@@ -75,6 +105,7 @@ sections.each_with_index {|vol, i|
     # fix lists
     d = Nokogiri::HTML(html)
     d.xpath("//li/p").each {|p| p.swap p.children}
+    download_images! d
     File.write(apath, d.serialize)
   }
 }

@@ -10,9 +10,27 @@ end
 
 # Run this from the kindle/ subdirectory
 
+def add_head_section(doc, title)
+  head = Nokogiri::XML::Node.new "head", doc
+  title_node = Nokogiri::XML::Node.new "title", doc
+  title_node.content = title
+  title_node.parent = head
+  css = Nokogiri::XML::Node.new "link", doc
+  css['rel'] = 'stylesheet'
+  css['type'] = 'text/css'
+  css['href'] = "#{Dir.pwd}/kindle.css"
+  css.parent = head
+  doc.at("body").before head
+end
+
 
 def wrap_html(title, body)
-  "<html><head><title>#{title}</title></head><body>#{body}</body></html>"
+  doc = Nokogiri::HTML(body)
+  add_head_section doc, title
+  # fix lists
+  doc.xpath("//li/p").each {|p| p.swap p.children}
+  download_images! doc
+  doc.serialize
 end
 
 def run_shell_command cmd
@@ -101,12 +119,7 @@ sections.each_with_index {|vol, i|
     raise "No title found for #{title_key}" unless title
     puts title
     html = wrap_html(title, "<h1>#{title}</h1>" + html_content)
-
-    # fix lists
-    d = Nokogiri::HTML(html)
-    d.xpath("//li/p").each {|p| p.swap p.children}
-    download_images! d
-    File.write(apath, d.serialize)
+    File.write(apath, html)
   }
 }
 
